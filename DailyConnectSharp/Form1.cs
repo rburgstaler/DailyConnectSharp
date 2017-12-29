@@ -66,17 +66,18 @@ namespace DailyConnectSharp
             }
         }
 
-        public bool PerformRequest(CookieContainer cookieContainer, String url, String content, out String respCont)
+        public bool PerformRequest(CookieContainer cookieContainer, String url, String content, out String respCont, DoMessage statusCallback)
         {
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.CookieContainer = cookieContainer;
 
             request.Method = "POST";
-
+            if (statusCallback != null) statusCallback($"Url: {url}");
 
             // set request body
             request.ContentType = "application/x-www-form-urlencoded";
             using (StreamWriter writer = new StreamWriter(request.GetRequestStream())) writer.Write(content);
+            if (statusCallback != null) statusCallback($"{content}");
 
             // GetResponse raises an exception on http status code 400
             // We can pull response out of the exception and continue on our way            
@@ -84,13 +85,13 @@ namespace DailyConnectSharp
             {
                 HttpWebResponse resp = request.GetResponse() as HttpWebResponse;
                 respCont = GetResponseContent(resp);
-                msgCallback($"Content {resp.StatusCode} - {resp.StatusDescription}");
-                msgCallback(PrettyfyString(respCont));
-                msgCallback("Cookie");
+                if (statusCallback != null) statusCallback($"Content {resp.StatusCode} - {resp.StatusDescription}");
+                if (statusCallback != null) statusCallback(PrettyfyString(respCont));
+                if (statusCallback != null) statusCallback("Cookie");
 
                 foreach (Cookie cook in cookieContainer.GetCookies(new Uri(url)))
                 {
-                    msgCallback($"{cook.Name}={cook.Value}");
+                    if(statusCallback != null) statusCallback($"{cook.Name}={cook.Value}");
                 }
             }
             catch (WebException ex)
@@ -109,20 +110,45 @@ namespace DailyConnectSharp
 
             String resStr = "";
             CookieContainer cookieContainer = new CookieContainer();
-            PerformRequest(cookieContainer, "https://www.dailyconnect.com/Cmd?cmd=UserAuth", "email=" + cp.Username + "&pass=" + cp.Password, out resStr);
-            PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=UserInfoW", out resStr);
+            PerformRequest(cookieContainer, "https://www.dailyconnect.com/Cmd?cmd=UserAuth", "email=" + cp.Username + "&pass=" + cp.Password, out resStr, null);
+            PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=UserInfoW", out resStr, null);
 
             UserInfoW userInfo = JsonConvert.DeserializeObject<UserInfoW>(resStr);
 
 
-            foreach (Child child in userInfo.myKids)
+            foreach (UserInfoW_Child child in userInfo.myKids)
             {
                 msgCallback($"{child.Name} - {child.Id}");
-                PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=KidGetSummary&Kid="+child.Id+"&pdt=171223", out resStr);
+                PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=KidGetSummary&Kid="+child.Id+"&pdt="+ startDate.ToString("yyMMdd"), out resStr, null);
+                KidGetSummary ks = JsonConvert.DeserializeObject<KidGetSummary>(resStr);
+                //msgCallback(ks.summary.);
             }
 
+            DateTime procDate = startDate;
+            while (procDate.Date >= endDate.Date)
+            {
+                foreach (UserInfoW_Child child in userInfo.myKids)
+                {
+                    PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=StatusList&Kid=" + child.Id + "&pdt=" + procDate.ToString("yyMMdd") + "&fmt=long&past=7", out resStr, null);
+                    StatusList sl = JsonConvert.DeserializeObject<StatusList>(resStr);
+
+                    foreach (StatusList_listitem statusItem in sl.list)
+                    {
+                        if (statusItem.Cat == (int)CatType.DropOff)
+                        {
+                            msgCallback(procDate.ToString("yyyy/MM/dd") + " " + child.Name + " " + statusItem.Utm + " " + statusItem.Txt);
+                        }
+                        //msgCallback($"{statusItem.Cat} - {statusItem.Utm} - {statusItem.Txt}");
+                    }
+                }
+                procDate = procDate.Subtract(new TimeSpan(1, 0, 0, 0));
+            }
 
         }
+
+        DateTime startDate = DateTime.Now;
+        //DateTime endDate = new DateTime(2017, 6, 26, 0, 0, 0);
+        DateTime endDate = DateTime.Now.Subtract(new TimeSpan(7, 0, 0, 0, 0));
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -138,7 +164,83 @@ namespace DailyConnectSharp
         }
     }
 
-    public class Child
+    public delegate void DoMessage(String msg);
+
+    public enum CatType
+    {
+        DropOff = 101,
+        PickUp = 102,
+        Meal = 200,
+        BM = 402,
+        WetDiaper = 403,
+        StartSleeping = 501,
+        StopsSleeping = 502,
+        Event = 700,
+        Picture = 1000
+    }
+
+    public class StatusList_listitem
+    {
+        public String By { get; set; }
+        public int Cat { get; set; }
+        public String ccid { get; set; }
+        public String d { get; set; }
+        public String e { get; set; }
+        public String Id { get; set; }
+        public String isst { get; set; }
+        public String Kid { get; set; }
+        public String ms { get; set; }
+        public String n { get; set; }
+        public String p { get; set; }
+        public String Pdt { get; set; }
+        public String Photo { get; set; }
+        public String s { get; set; }
+        public String Txt { get; set; }
+        public String uid_in { get; set; }
+        public String uid_out { get; set; }
+        public String Utm { get; set; }
+        public StatusList_listitem()
+        {
+            Cat = 0;
+        }
+    }
+
+    public class StatusList
+    {
+        public StatusList_listitem[] list { get; set; }
+        public StatusList()
+        {
+            list = new StatusList_listitem[0];
+        }
+    }
+
+    public class KidGetSummary_KidSummary
+    {
+        public String timeOfLastDiaper { get; set; }
+        public String isSleeping { get; set; }
+        public String nrOfSleep { get; set; }
+        public String nrOfBMDiapers { get; set; }
+        public String nrOfWetDiapers { get; set; }
+        public String kidId { get; set; }
+        public String longuestSleepDuration { get; set; }
+        public String lastRoomIn { get; set; }
+        public String nrOfDiapers { get; set; }
+        public String timeOfLastSleeping { get; set; }
+        public String timeOfLastFood { get; set; }
+        public String totalSleepDuration { get; set; }
+        public String day { get; set; }
+    }
+
+    public class KidGetSummary
+    {
+        public KidGetSummary_KidSummary summary { get; set; }
+        public KidGetSummary()
+        {
+            summary = new KidGetSummary_KidSummary();
+        }
+    }
+
+    public class UserInfoW_Child
     {
         public String Name { get; set; }
         public String Id { get; set; }
@@ -147,10 +249,10 @@ namespace DailyConnectSharp
 
     public class UserInfoW
     {
-        public Child[] myKids { get; set; }
+        public UserInfoW_Child[] myKids { get; set; }
         public UserInfoW()
         {
-            myKids = new Child[0];
+            myKids = new UserInfoW_Child[0];
         }
     }
 
