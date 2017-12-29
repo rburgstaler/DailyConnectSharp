@@ -34,6 +34,10 @@
             this.tbPassword = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
+            this.tbStartDate = new System.Windows.Forms.TextBox();
+            this.tbStopDate = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // btGo
@@ -91,11 +95,47 @@
             this.label2.TabIndex = 5;
             this.label2.Text = "Password";
             // 
+            // tbStartDate
+            // 
+            this.tbStartDate.Location = new System.Drawing.Point(359, 88);
+            this.tbStartDate.Name = "tbStartDate";
+            this.tbStartDate.Size = new System.Drawing.Size(100, 20);
+            this.tbStartDate.TabIndex = 6;
+            // 
+            // tbStopDate
+            // 
+            this.tbStopDate.Location = new System.Drawing.Point(511, 88);
+            this.tbStopDate.Name = "tbStopDate";
+            this.tbStopDate.Size = new System.Drawing.Size(100, 20);
+            this.tbStopDate.TabIndex = 7;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(309, 91);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(29, 13);
+            this.label3.TabIndex = 8;
+            this.label3.Text = "Start";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(465, 91);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(29, 13);
+            this.label4.TabIndex = 9;
+            this.label4.Text = "Stop";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(666, 403);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.tbStopDate);
+            this.Controls.Add(this.tbStartDate);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.tbPassword);
@@ -119,6 +159,10 @@
         private System.Windows.Forms.TextBox tbPassword;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox tbStartDate;
+        private System.Windows.Forms.TextBox tbStopDate;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label label4;
     }
 }
 

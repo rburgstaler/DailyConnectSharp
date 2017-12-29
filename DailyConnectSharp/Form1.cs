@@ -68,11 +68,15 @@ namespace DailyConnectSharp
         {
             pref.Username = tbUserName.Text;
             pref.Password = tbPassword.Text;
+            pref.StartDate = tbStartDate.Text;
+            pref.StopDate = tbStopDate.Text;
         }
         public void PrefsToForm(Prefs pref)
         {
             tbUserName.Text = pref.Username;
             tbPassword.Text = pref.Password;
+            tbStartDate.Text = pref.StartDate;
+            tbStopDate.Text = pref.StopDate;
         }
 
         public String PrettyfyString(String content)
@@ -123,42 +127,67 @@ namespace DailyConnectSharp
             return true;
         }
 
+        public DateTime ParseDateTime(String dateStr)
+        {
+            try
+            {
+                if (dateStr.Equals("now", StringComparison.CurrentCultureIgnoreCase)) return DateTime.Now;
+                return DateTime.Parse(dateStr);
+            }
+            catch (Exception exp)
+            {
+                throw new Exception($"Error parsing string '{dateStr}', {exp.Message}");                
+
+            }
+        }
+
         public void ProcessData(Prefs cp)
         {
-            String resStr = "";
-            CookieContainer cookieContainer = new CookieContainer();
-            PerformRequest(cookieContainer, "https://www.dailyconnect.com/Cmd?cmd=UserAuth", "email=" + cp.Username + "&pass=" + cp.Password, out resStr, null);
-            PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=UserInfoW", out resStr, null);
-
-            UserInfoW userInfo = JsonConvert.DeserializeObject<UserInfoW>(resStr);
-
-
-            foreach (UserInfoW_Child child in userInfo.myKids)
+            try
             {
-                ThreadMsg($"{child.Name} - {child.Id}");
-                PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=KidGetSummary&Kid=" + child.Id + "&pdt=" + startDate.ToString("yyMMdd"), out resStr, null);
-                KidGetSummary ks = JsonConvert.DeserializeObject<KidGetSummary>(resStr);
-                //msgCallback(ks.summary.);
-            }
+                DateTime startDate = ParseDateTime(cp.StartDate);
+                DateTime endDate = ParseDateTime(cp.StopDate);
 
-            DateTime procDate = startDate;
-            while (procDate.Date >= endDate.Date)
-            {
+
+                String resStr = "";
+                CookieContainer cookieContainer = new CookieContainer();
+                PerformRequest(cookieContainer, "https://www.dailyconnect.com/Cmd?cmd=UserAuth", "email=" + cp.Username + "&pass=" + cp.Password, out resStr, null);
+                PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=UserInfoW", out resStr, null);
+
+                UserInfoW userInfo = JsonConvert.DeserializeObject<UserInfoW>(resStr);
+
+
                 foreach (UserInfoW_Child child in userInfo.myKids)
                 {
-                    PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=StatusList&Kid=" + child.Id + "&pdt=" + procDate.ToString("yyMMdd") + "&fmt=long&past=7", out resStr, null);
-                    StatusList sl = JsonConvert.DeserializeObject<StatusList>(resStr);
-
-                    foreach (StatusList_listitem statusItem in sl.list)
-                    {
-                        if (statusItem.Cat == (int)CatType.DropOff)
-                        {
-                            ThreadMsg(procDate.ToString("yyyy/MM/dd") + " " + child.Name + " " + statusItem.Utm + " " + statusItem.Txt);
-                        }
-                        //msgCallback($"{statusItem.Cat} - {statusItem.Utm} - {statusItem.Txt}");
-                    }
+                    ThreadMsg($"{child.Name} - {child.Id}");
+                    PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=KidGetSummary&Kid=" + child.Id + "&pdt=" + startDate.ToString("yyMMdd"), out resStr, null);
+                    KidGetSummary ks = JsonConvert.DeserializeObject<KidGetSummary>(resStr);
+                    //msgCallback(ks.summary.);
                 }
-                procDate = procDate.Subtract(new TimeSpan(1, 0, 0, 0));
+
+                DateTime procDate = startDate;
+                while (procDate.Date >= endDate.Date)
+                {
+                    foreach (UserInfoW_Child child in userInfo.myKids)
+                    {
+                        PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=StatusList&Kid=" + child.Id + "&pdt=" + procDate.ToString("yyMMdd") + "&fmt=long&past=7", out resStr, null);
+                        StatusList sl = JsonConvert.DeserializeObject<StatusList>(resStr);
+
+                        foreach (StatusList_listitem statusItem in sl.list)
+                        {
+                            if (statusItem.Cat == (int)CatType.DropOff)
+                            {
+                                ThreadMsg(procDate.ToString("yyyy/MM/dd") + " " + child.Name + " " + statusItem.Utm + " " + statusItem.Txt);
+                            }
+                            //msgCallback($"{statusItem.Cat} - {statusItem.Utm} - {statusItem.Txt}");
+                        }
+                    }
+                    procDate = procDate.Subtract(new TimeSpan(1, 0, 0, 0));
+                }
+            }
+            catch (Exception exp)
+            {
+                ThreadMsg(exp.Message);
             }
         }
 
@@ -180,10 +209,6 @@ namespace DailyConnectSharp
             btGo.Enabled = false;
             thd.Start();
         }
-
-        DateTime startDate = DateTime.Now;
-        //DateTime endDate = new DateTime(2017, 6, 26, 0, 0, 0);
-        DateTime endDate = DateTime.Now.Subtract(new TimeSpan(7, 0, 0, 0, 0));
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -295,10 +320,14 @@ namespace DailyConnectSharp
     {
         public String Username { get; set; }
         public String Password { get; set; }
+        public String StartDate { get; set; }
+        public String StopDate { get; set; }
         public Prefs()
         {
             Username = "";
             Password = "";
+            StartDate = "";
+            StopDate = "";
         }
     }
 }
