@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -26,14 +27,35 @@ namespace DailyConnectSharp
 
         }
 
+        delegate void ThreadProcType();
+        delegate void ThreadProcCaller(ThreadProcType AProc);
+        private void ThreadProc(ThreadProcType AProc)
+        {
+            if (InvokeRequired)
+            {
+                ThreadProcCaller d = new ThreadProcCaller(ThreadProc);
+                Invoke(d, new object[] { AProc });
+            }
+            else
+            {
+                AProc();
+            }
+
+        }
+
+
+        public void ThreadMsg(String msg)
+        {
+            ThreadProc(
+                delegate ()
+                {
+                    textBox1.AppendText(msg + Environment.NewLine);
+                });
+        }
+
         public Form1()
         {
             InitializeComponent();
-        }
-
-        private void msgCallback(String msg)
-        {
-            textBox1.AppendText(msg + Environment.NewLine);
         }
 
         public static string GetResponseContent(WebResponse resp)
@@ -101,13 +123,8 @@ namespace DailyConnectSharp
             return true;
         }
 
-        private void btGo_Click(object sender, EventArgs e)
+        public void ProcessData(Prefs cp)
         {
-            Prefs cp = new Prefs();
-            FormToPrefs(cp);
-            File.WriteAllText(PrefPath(), JsonConvert.SerializeObject(cp, Formatting.Indented));
-
-
             String resStr = "";
             CookieContainer cookieContainer = new CookieContainer();
             PerformRequest(cookieContainer, "https://www.dailyconnect.com/Cmd?cmd=UserAuth", "email=" + cp.Username + "&pass=" + cp.Password, out resStr, null);
@@ -118,8 +135,8 @@ namespace DailyConnectSharp
 
             foreach (UserInfoW_Child child in userInfo.myKids)
             {
-                msgCallback($"{child.Name} - {child.Id}");
-                PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=KidGetSummary&Kid="+child.Id+"&pdt="+ startDate.ToString("yyMMdd"), out resStr, null);
+                ThreadMsg($"{child.Name} - {child.Id}");
+                PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=KidGetSummary&Kid=" + child.Id + "&pdt=" + startDate.ToString("yyMMdd"), out resStr, null);
                 KidGetSummary ks = JsonConvert.DeserializeObject<KidGetSummary>(resStr);
                 //msgCallback(ks.summary.);
             }
@@ -136,14 +153,32 @@ namespace DailyConnectSharp
                     {
                         if (statusItem.Cat == (int)CatType.DropOff)
                         {
-                            msgCallback(procDate.ToString("yyyy/MM/dd") + " " + child.Name + " " + statusItem.Utm + " " + statusItem.Txt);
+                            ThreadMsg(procDate.ToString("yyyy/MM/dd") + " " + child.Name + " " + statusItem.Utm + " " + statusItem.Txt);
                         }
                         //msgCallback($"{statusItem.Cat} - {statusItem.Utm} - {statusItem.Txt}");
                     }
                 }
                 procDate = procDate.Subtract(new TimeSpan(1, 0, 0, 0));
             }
+        }
 
+        private void btGo_Click(object sender, EventArgs e)
+        {
+            Prefs cp = new Prefs();
+            FormToPrefs(cp);
+            File.WriteAllText(PrefPath(), JsonConvert.SerializeObject(cp, Formatting.Indented));
+            Thread thd = new Thread(new ThreadStart(
+                delegate
+                {
+                    ProcessData(cp);
+                    ThreadProc(
+                        delegate ()
+                        {
+                            btGo.Enabled = true;
+                        });
+                }));
+            btGo.Enabled = false;
+            thd.Start();
         }
 
         DateTime startDate = DateTime.Now;
