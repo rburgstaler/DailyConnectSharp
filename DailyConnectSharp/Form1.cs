@@ -208,7 +208,7 @@ namespace DailyConnectSharp
                 {     
                     foreach (UserInfoW_Child child in userInfo.myKids)
                     {
-                        PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=StatusList&Kid=" + child.Id + "&pdt=" + procDate.ToString("yyMMdd") + "&fmt=long&past=7", out resStr, ThreadMsg);
+                        PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=StatusList&Kid=" + child.Id + "&pdt=" + procDate.ToString("yyMMdd") + "&fmt=long&past=7", out resStr, null);
                         StatusList sl = JsonConvert.DeserializeObject<StatusList>(resStr);
 
                         foreach (StatusList_listitem statusItem in sl.list)
@@ -231,7 +231,7 @@ namespace DailyConnectSharp
                     procDate = procDate.Subtract(new TimeSpan(1, 0, 0, 0));
                 }
 
-                ThreadMsg(JsonConvert.SerializeObject(pics, Formatting.Indented));
+                //ThreadMsg(JsonConvert.SerializeObject(pics, Formatting.Indented));
 
                 for (int idx = 0; idx < pics.Count; idx++)
                 {
