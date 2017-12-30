@@ -38,6 +38,8 @@
             this.tbStopDate = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
+            this.tbPicturePath = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // btGo
@@ -55,11 +57,11 @@
             this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBox1.Location = new System.Drawing.Point(5, 126);
+            this.textBox1.Location = new System.Drawing.Point(5, 163);
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
             this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBox1.Size = new System.Drawing.Size(659, 271);
+            this.textBox1.Size = new System.Drawing.Size(659, 234);
             this.textBox1.TabIndex = 1;
             this.textBox1.WordWrap = false;
             // 
@@ -127,11 +129,29 @@
             this.label4.TabIndex = 9;
             this.label4.Text = "Stop";
             // 
+            // tbPicturePath
+            // 
+            this.tbPicturePath.Location = new System.Drawing.Point(359, 124);
+            this.tbPicturePath.Name = "tbPicturePath";
+            this.tbPicturePath.Size = new System.Drawing.Size(252, 20);
+            this.tbPicturePath.TabIndex = 10;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(285, 127);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(65, 13);
+            this.label5.TabIndex = 11;
+            this.label5.Text = "Picture Path";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(666, 403);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.tbPicturePath);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.tbStopDate);
@@ -163,6 +183,8 @@
         private System.Windows.Forms.TextBox tbStopDate;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.TextBox tbPicturePath;
+        private System.Windows.Forms.Label label5;
     }
 }
 

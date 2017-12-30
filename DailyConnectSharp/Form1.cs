@@ -70,6 +70,7 @@ namespace DailyConnectSharp
             pref.Password = tbPassword.Text;
             pref.StartDate = tbStartDate.Text;
             pref.StopDate = tbStopDate.Text;
+            pref.PicturePath = tbPicturePath.Text;
         }
         public void PrefsToForm(Prefs pref)
         {
@@ -77,6 +78,7 @@ namespace DailyConnectSharp
             tbPassword.Text = pref.Password;
             tbStartDate.Text = pref.StartDate;
             tbStopDate.Text = pref.StopDate;
+            tbPicturePath.Text = pref.PicturePath;
         }
 
         public String PrettyfyString(String content)
@@ -127,6 +129,40 @@ namespace DailyConnectSharp
             return true;
         }
 
+        public bool PerformGetRequest(CookieContainer cookieContainer, String url, String filePath, DoMessage statusCallback)
+        {
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.CookieContainer = cookieContainer;
+
+            request.Method = "GET";
+            if (statusCallback != null) statusCallback($"Url: {url}");
+
+            // GetResponse raises an exception on http status code 400
+            // We can pull response out of the exception and continue on our way            
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                HttpWebResponse resp = request.GetResponse() as HttpWebResponse;
+                using (Stream output = File.OpenWrite(filePath))
+                using (Stream input = resp.GetResponseStream())
+                {
+                    input.CopyTo(output);
+                }
+                if (statusCallback != null) statusCallback($"Content {resp.StatusCode} - {resp.StatusDescription}");
+                if (statusCallback != null) statusCallback("Cookie");
+
+                foreach (Cookie cook in cookieContainer.GetCookies(new Uri(url)))
+                {
+                    if (statusCallback != null) statusCallback($"{cook.Name}={cook.Value}");
+                }
+            }
+            catch (WebException ex)
+            {
+                throw new Exception(String.Format("Error processing request: {0}, Response: {1}", ex.Message, GetResponseContent(ex.Response)));
+            }
+            return true;
+        }
+
         public DateTime ParseDateTime(String dateStr)
         {
             try
@@ -165,42 +201,44 @@ namespace DailyConnectSharp
                     //msgCallback(ks.summary.);
                 }
 
-                DataTable dt = new DataTable();
-                dt.Columns.Add("Date");
+                List<DailyConnectPicture> pics = new List<DailyConnectPicture>();
 
                 DateTime procDate = startDate;
                 while (procDate.Date >= endDate.Date)
-                {
-                    DataRow dr = null;
+                {     
                     foreach (UserInfoW_Child child in userInfo.myKids)
                     {
-                        PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=StatusList&Kid=" + child.Id + "&pdt=" + procDate.ToString("yyMMdd") + "&fmt=long&past=7", out resStr, null);
+                        PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=StatusList&Kid=" + child.Id + "&pdt=" + procDate.ToString("yyMMdd") + "&fmt=long&past=7", out resStr, ThreadMsg);
                         StatusList sl = JsonConvert.DeserializeObject<StatusList>(resStr);
 
                         foreach (StatusList_listitem statusItem in sl.list)
                         {
-                            if ((CatType)statusItem.Cat == CatType.DropOff)
+                            if (((CatType)statusItem.Cat == CatType.Picture) || ((CatType)statusItem.Cat == CatType.PictureWithCaption))
                             {
-                                if (dr == null)
-                                {
-                                    dr = dt.NewRow();
-                                    dr["Date"] = procDate.Date;
-                                    dt.Rows.Add(dr);
-                                }
-                                String colName = child.Name + "_DropOff";
-                                DataColumn dc = dt.Columns[colName];
-                                if (dc == null) dc = dt.Columns.Add(colName, typeof(DateTime));
-                                dr[dc] = ParseUTM(procDate.Date, statusItem.Utm);
 
+
+                                
                                 ThreadMsg(procDate.ToString("yyyy/MM/dd") + " " + child.Name + " " + statusItem.Utm + " " + statusItem.Txt);
+                                pics.Add(new DailyConnectPicture()
+                                {
+                                    Photo = statusItem.Photo,
+                                    Date = ParseUTM(procDate.Date, statusItem.Utm)
+                                });
                             }
-                            //msgCallback($"{statusItem.Cat} - {statusItem.Utm} - {statusItem.Txt}");
+
                         }
                     }
                     procDate = procDate.Subtract(new TimeSpan(1, 0, 0, 0));
                 }
 
-                ThreadMsg(JsonConvert.SerializeObject(dt, Formatting.Indented));
+                ThreadMsg(JsonConvert.SerializeObject(pics, Formatting.Indented));
+
+                foreach (DailyConnectPicture dcp in pics)
+                {
+                    String imageUrl = "https://www.dailyconnect.com/GetCmd?cmd=PhotoGet&id=" + dcp.Photo;
+                    ThreadMsg($"Fetching image {imageUrl}: {dcp.Date.ToString()}");
+                    PerformGetRequest(cookieContainer, imageUrl, Path.Combine(cp.PicturePath, dcp.Date.ToString("yyyyMMdd.HHmmss") + ".jpg"), null);
+                }
             }
             catch (Exception exp)
             {
@@ -251,6 +289,12 @@ namespace DailyConnectSharp
         }
     }
 
+    public class DailyConnectPicture
+    {
+        public String Photo { get; set; }
+        public DateTime Date { get; set; }
+    }
+
     public delegate void DoMessage(String msg);
 
     public enum CatType
@@ -263,7 +307,8 @@ namespace DailyConnectSharp
         StartSleeping = 501,
         StopsSleeping = 502,
         Event = 700,
-        Picture = 1000
+        PictureWithCaption = 1000,
+        Picture = 1001
     }
 
     public class StatusList_listitem
@@ -349,12 +394,14 @@ namespace DailyConnectSharp
         public String Password { get; set; }
         public String StartDate { get; set; }
         public String StopDate { get; set; }
+        public String PicturePath { get; set; }
         public Prefs()
         {
             Username = "";
             Password = "";
-            StartDate = "";
-            StopDate = "";
+            StartDate = "Now";
+            StopDate = "12/1/2017";
+            PicturePath = "";
         }
     }
 }
