@@ -165,9 +165,13 @@ namespace DailyConnectSharp
                     //msgCallback(ks.summary.);
                 }
 
+                DataTable dt = new DataTable();
+                dt.Columns.Add("Date");
+
                 DateTime procDate = startDate;
                 while (procDate.Date >= endDate.Date)
                 {
+                    DataRow dr = null;
                     foreach (UserInfoW_Child child in userInfo.myKids)
                     {
                         PerformRequest(cookieContainer, "https://www.dailyconnect.com/CmdW", "cmd=StatusList&Kid=" + child.Id + "&pdt=" + procDate.ToString("yyMMdd") + "&fmt=long&past=7", out resStr, null);
@@ -175,8 +179,19 @@ namespace DailyConnectSharp
 
                         foreach (StatusList_listitem statusItem in sl.list)
                         {
-                            if (statusItem.Cat == (int)CatType.DropOff)
+                            if ((CatType)statusItem.Cat == CatType.DropOff)
                             {
+                                if (dr == null)
+                                {
+                                    dr = dt.NewRow();
+                                    dr["Date"] = procDate.Date;
+                                    dt.Rows.Add(dr);
+                                }
+                                String colName = child.Name + "_DropOff";
+                                DataColumn dc = dt.Columns[colName];
+                                if (dc == null) dc = dt.Columns.Add(colName, typeof(DateTime));
+                                dr[dc] = ParseUTM(procDate.Date, statusItem.Utm);
+
                                 ThreadMsg(procDate.ToString("yyyy/MM/dd") + " " + child.Name + " " + statusItem.Utm + " " + statusItem.Txt);
                             }
                             //msgCallback($"{statusItem.Cat} - {statusItem.Utm} - {statusItem.Txt}");
@@ -184,11 +199,23 @@ namespace DailyConnectSharp
                     }
                     procDate = procDate.Subtract(new TimeSpan(1, 0, 0, 0));
                 }
+
+                ThreadMsg(JsonConvert.SerializeObject(dt, Formatting.Indented));
             }
             catch (Exception exp)
             {
                 ThreadMsg(exp.Message);
             }
+        }
+
+        public static DateTime ParseUTM(DateTime date, String utmStr)
+        {
+            int min = 0;
+            int hr = 0;
+            int minIndex = utmStr.Length - 2;
+            min = int.Parse(utmStr.Substring(minIndex));
+            hr = int.Parse(utmStr.Substring(0, minIndex));
+            return new DateTime(date.Year, date.Month, date.Day, hr, min, 0);
         }
 
         private void btGo_Click(object sender, EventArgs e)
