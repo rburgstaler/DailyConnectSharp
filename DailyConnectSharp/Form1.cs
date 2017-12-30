@@ -213,7 +213,7 @@ namespace DailyConnectSharp
 
                         foreach (StatusList_listitem statusItem in sl.list)
                         {
-                            if (((CatType)statusItem.Cat == CatType.Picture) || ((CatType)statusItem.Cat == CatType.PictureWithCaption))
+                            if (statusItem.Photo != null)
                             {
 
 
