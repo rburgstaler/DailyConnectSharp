@@ -233,11 +233,12 @@ namespace DailyConnectSharp
 
                 ThreadMsg(JsonConvert.SerializeObject(pics, Formatting.Indented));
 
-                foreach (DailyConnectPicture dcp in pics)
+                for (int idx = 0; idx < pics.Count; idx++)
                 {
+                    DailyConnectPicture dcp = pics[idx];
                     String imageUrl = "https://www.dailyconnect.com/GetCmd?cmd=PhotoGet&id=" + dcp.Photo;
-                    ThreadMsg($"Fetching image {imageUrl}: {dcp.Date.ToString()}");
-                    PerformGetRequest(cookieContainer, imageUrl, Path.Combine(cp.PicturePath, dcp.Date.ToString("yyyyMMdd.HHmmss") + ".jpg"), null);
+                    ThreadMsg($"({idx+1} of {pics.Count}) Fetching image {imageUrl}: {dcp.Date.ToString()}");
+                    PerformGetRequest(cookieContainer, imageUrl, Path.Combine(cp.PicturePath, dcp.Date.ToString("yyyyMMdd.HHmmss") + "_" + dcp.Photo + ".jpg"), null);
                 }
             }
             catch (Exception exp)
